@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Approval | Profile Management</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a237e 0%, #311b92 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        .admin-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: all 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+        }
+        
+        .stat-card.pending {
+            border-top: 5px solid #ff9800;
+        }
+        
+        .stat-card.approved {
+            border-top: 5px solid #4caf50;
+        }
+        
+        .stat-card.rejected {
+            border-top: 5px solid #f44336;
+        }
+        
+        .stat-card.total {
+            border-top: 5px solid #2196f3;
+        }
+        
+        .stat-value {
+            font-size: 36px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .pending .stat-value { color: #ff9800; }
+        .approved .stat-value { color: #4caf50; }
+        .rejected .stat-value { color: #f44336; }
+        .total .stat-value { color: #2196f3; }
+        
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            background: white;
+            padding: 15px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .tab-btn {
+            padding: 12px 30px;
+            border: none;
+            background: #f5f5f5;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .tab-btn.active {
+            background: #4f46e5;
+            color: white;
+        }
+        
+        .tab-btn:hover:not(.active) {
+            background: #e0e0e0;
+        }
+        
+        .profiles-table {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+        }
+        
+        .table-header {
+            display: grid;
+            grid-template-columns: 1fr 2fr 2fr 1fr 1fr 2fr;
+            padding: 20px;
+            background: #4f46e5;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .table-row {
+            display: grid;
+            grid-template-columns: 1fr 2fr 2fr 1fr 1fr 2fr;
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+            align-items: center;
+            transition: all 0.3s;
+        }
+        
+        .table-row:hover {
+            background: #f9f9f9;
+        }
+        
+        .table-row.pending {
+            background: #fff8e1;
+        }
+        
+        .table-row.approved {
+            background: #e8f5e9;
+        }
+        
+        .table-row.rejected {
+            background: #ffebee;
+        }
+        
+        .profile-photo {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #e0e0e0;
+        }
+        
+        .status-badge {
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-align: center;
+        }
+        
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .status-approved {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status-rejected {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+        
+        .btn-approve {
+            background: #4caf50;
+            color: white;
+        }
+        
+        .btn-approve:hover {
+            background: #388e3c;
+            transform: translateY(-2px);
+        }
+        
+        .btn-reject {
+            background: #f44336;
+            color: white;
+        }
+        
+        .btn-reject:hover {
+            background: #d32f2f;
+            transform: translateY(-2px);
+        }
+        
+        .btn-view {
+            background: #2196f3;
+            color: white;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        
+        .btn-view:hover {
+            background: #1976d2;
+            transform: translateY(-2px);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+        }
+        
+        .empty-state i {
+            font-size: 80px;
+            color: #e0e0e0;
+            margin-bottom: 20px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .loading i {
+            font-size: 40px;
+            color: #4f46e5;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+        }
+        
+        .modal h3 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .modal-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            justify-content: flex-end;
+        }
+        
+        .modal-btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        .modal-btn.confirm {
+            background: #4caf50;
+            color: white;
+        }
+        
+        .modal-btn.cancel {
+            background: #f5f5f5;
+            color: #666;
+        }
+        
+        .admin-nav {
+            margin-top: 40px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .nav-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            color: white;
+            text-decoration: none;
+            padding: 12px 25px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            transition: all 0.3s;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(-5px);
+        }
+        
+        @media (max-width: 1200px) {
+            .table-header, .table-row {
+                grid-template-columns: 1fr 2fr 2fr 1fr;
+            }
+            
+            .profile-photo-cell, .actions-cell {
+                display: none;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .tabs {
+                flex-direction: column;
+            }
+            
+            .table-header, .table-row {
+                grid-template-columns: 1fr 2fr;
+                padding: 15px;
+            }
+            
+            .email-cell, .date-cell {
+                display: none;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-user-shield"></i> Admin Approval Panel</h1>
+            <p>Approve or reject profiles before they appear on the public dashboard</p>
+        </div>
+        
+        <div class="admin-stats">
+            <div class="stat-card pending">
+                <div class="stat-value" id="pendingCount">0</div>
+                <div class="stat-label">Pending Approval</div>
+            </div>
+            <div class="stat-card approved">
+                <div class="stat-value" id="approvedCount">0</div>
+                <div class="stat-label">Approved</div>
+            </div>
+            <div class="stat-card rejected">
+                <div class="stat-value" id="rejectedCount">0</div>
+                <div class="stat-label">Rejected</div>
+            </div>
+            <div class="stat-card total">
+                <div class="stat-value" id="totalCount">0</div>
+                <div class="stat-label">Total Profiles</div>
+            </div>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="all">All Profiles</button>
+            <button class="tab-btn" data-tab="pending">Pending Review</button>
+            <button class="tab-btn" data-tab="approved">Approved</button>
+            <button class="tab-btn" data-tab="rejected">Rejected</button>
+        </div>
+        
+        <div class="profiles-table">
+            <div class="table-header">
+                <div>Photo</div>
+                <div>Name</div>
+                <div>Email</div>
+                <div>Role</div>
+                <div>Status</div>
+                <div>Actions</div>
+            </div>
+            
+            <div id="profilesTable">
+                <div class="loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Loading profiles for review...</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="admin-nav">
+            <a href="dashboard-worker.html" class="nav-link">
+                <i class="fas fa-th-large"></i> View Public Dashboard
+            </a>
+            <a href="index.html" class="nav-link">
+                <i class="fas fa-user-plus"></i> Create New Profile
+            </a>
+            <a href="r2-manager-worker.html" class="nav-link">
+                <i class="fas fa-database"></i> R2 Storage Manager
+            </a>
+        </div>
+    </div>
+
+    <!-- Approval Modal -->
+    <div class="modal" id="approvalModal">
+        <div class="modal-content">
+            <h3><i class="fas fa-check-circle"></i> Approve Profile</h3>
+            <p>Are you sure you want to approve <strong id="approveName">[Name]</strong>'s profile?</p>
+            <p>This profile will become visible on the public dashboard.</p>
+            <div class="modal-actions">
+                <button class="modal-btn cancel" id="cancelApprove">Cancel</button>
+                <button class="modal-btn confirm" id="confirmApprove">Approve Profile</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rejection Modal -->
+    <div class="modal" id="rejectionModal">
+        <div class="modal-content">
+            <h3><i class="fas fa-times-circle"></i> Reject Profile</h3>
+            <p>Are you sure you want to reject <strong id="rejectName">[Name]</strong>'s profile?</p>
+            <div class="form-group" style="margin-top: 20px;">
+                <label for="rejectReason">Reason for rejection (optional):</label>
+                <textarea id="rejectReason" placeholder="Enter reason for rejection..." rows="3" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd; margin-top: 10px;"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn cancel" id="cancelReject">Cancel</button>
+                <button class="modal-btn confirm" style="background: #f44336;" id="confirmReject">Reject Profile</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const WORKER_URL = "https://secure-r2-upload.ravemaster.workers.dev";
+        const CDN_DOMAIN = "https://rave-master.de";
+        
+        // State
+        let allProfiles = [];
+        let currentTab = 'all';
+        let currentActionProfile = null;
+        let currentActionProfileName = null;
+        
+        // DOM Elements
+        const profilesTable = document.getElementById('profilesTable');
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        const approvalModal = document.getElementById('approvalModal');
+        const rejectionModal = document.getElementById('rejectionModal');
+        
+        // Stats elements
+        const pendingCountEl = document.getElementById('pendingCount');
+        const approvedCountEl = document.getElementById('approvedCount');
+        const rejectedCountEl = document.getElementById('rejectedCount');
+        const totalCountEl = document.getElementById('totalCount');
+        
+        // Load profiles
+        async function loadProfiles() {
+            console.log('🔄 Loading profiles from admin endpoint...');
+            profilesTable.innerHTML = `
+                <div class="loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Loading profiles for review...</p>
+                </div>
+            `;
+            
+            try {
+                const response = await fetch(WORKER_URL + '/admin/list');
+                
+                if (!response.ok) {
+                    throw new Error(`Admin endpoint responded with ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // Check if it's debug response (no profiles found)
+                if (data.debug) {
+                    console.log('Debug response:', data);
+                    profilesTable.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <h3>Debug Info</h3>
+                            <p>${data.message}</p>
+                            <p>Total files: ${data.totalFiles}</p>
+                            <p>JSON files: ${data.jsonFiles}</p>
+                            <p>Image files: ${data.imageFiles}</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                allProfiles = data;
+                console.log(`📊 Loaded ${allProfiles.length} profiles`);
+                
+                // Update stats
+                updateStats();
+                
+                // Display profiles
+                displayProfiles();
+                
+            } catch (error) {
+                console.error('Error loading profiles:', error);
+                profilesTable.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>Failed to Load Profiles</h3>
+                        <p>Error: ${error.message}</p>
+                        <button onclick="loadProfiles()" style="margin-top: 20px; padding: 10px 20px; background: #4f46e5; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                            <i class="fas fa-redo"></i> Try Again
+                        </button>
+                    </div>
+                `;
+            }
+        }
+        
+        // Update statistics
+        function updateStats() {
+            const pending = allProfiles.filter(p => p.adminStatus === 'pending').length;
+            const approved = allProfiles.filter(p => p.adminStatus === 'approved').length;
+            const rejected = allProfiles.filter(p => p.adminStatus === 'rejected').length;
+            const total = allProfiles.length;
+            
+            pendingCountEl.textContent = pending;
+            approvedCountEl.textContent = approved;
+            rejectedCountEl.textContent = rejected;
+            totalCountEl.textContent = total;
+        }
+        
+        // Display profiles based on current tab
+        function displayProfiles() {
+            let filteredProfiles = allProfiles;
+            
+            // Filter by tab
+            if (currentTab === 'pending') {
+                filteredProfiles = allProfiles.filter(p => p.adminStatus === 'pending');
+            } else if (currentTab === 'approved') {
+                filteredProfiles = allProfiles.filter(p => p.adminStatus === 'approved');
+            } else if (currentTab === 'rejected') {
+                filteredProfiles = allProfiles.filter(p => p.adminStatus === 'rejected');
+            }
+            
+            if (filteredProfiles.length === 0) {
+                profilesTable.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-user-slash"></i>
+                        <h3>No Profiles Found</h3>
+                        <p>No profiles match the current filter (${currentTab}).</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Create table rows
+            profilesTable.innerHTML = filteredProfiles.map(profile => {
+                const statusClass = `status-${profile.adminStatus || 'pending'}`;
+                const statusText = (profile.adminStatus || 'pending').charAt(0).toUpperCase() + (profile.adminStatus || 'pending').slice(1);
+                
+                // Determine action buttons based on status
+                let actionButtons = '';
+                if ((profile.adminStatus || 'pending') === 'pending') {
+                    actionButtons = `
+                        <button class="btn btn-approve" onclick="showApproveModal('${profile.id}', '${profile.fullName || 'Unknown'}')">
+                            <i class="fas fa-check"></i> Approve
+                        </button>
+                        <button class="btn btn-reject" onclick="showRejectModal('${profile.id}', '${profile.fullName || 'Unknown'}')">
+                            <i class="fas fa-times"></i> Reject
+                        </button>
+                    `;
+                } else if (profile.adminStatus === 'approved') {
+                    actionButtons = `
+                        <button class="btn btn-reject" onclick="showRejectModal('${profile.id}', '${profile.fullName || 'Unknown'}')">
+                            <i class="fas fa-times"></i> Reject
+                        </button>
+                    `;
+                } else if (profile.adminStatus === 'rejected') {
+                    actionButtons = `
+                        <button class="btn btn-approve" onclick="showApproveModal('${profile.id}', '${profile.fullName || 'Unknown'}')">
+                            <i class="fas fa-check"></i> Approve
+                        </button>
+                    `;
+                }
+                
+                // Add view button
+                const imageUrl = profile.imageUrl || `${CDN_DOMAIN}/profile-${profile.id}.jpg`;
+                actionButtons += `
+                    <a href="${imageUrl}" target="_blank" class="btn btn-view">
+                        <i class="fas fa-eye"></i> View
+                    </a>
+                `;
+                
+                return `
+                    <div class="table-row ${profile.adminStatus || 'pending'}">
+                        <div class="profile-photo-cell">
+                            <img src="${imageUrl}" 
+                                 alt="${profile.fullName || 'Unknown'}" 
+                                 class="profile-photo"
+                                 onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(profile.fullName || 'Unknown')}&background=4f46e5&color=fff&size=60'">
+                        </div>
+                        <div class="name-cell">
+                            <strong>${profile.fullName || 'Unknown'}</strong>
+                        </div>
+                        <div class="email-cell">
+                            ${profile.email || 'No email'}
+                        </div>
+                        <div class="role-cell">
+                            ${profile.role || 'Not specified'}
+                        </div>
+                        <div class="status-cell">
+                            <span class="status-badge ${statusClass}">${statusText}</span>
+                        </div>
+                        <div class="actions-cell">
+                            <div class="action-buttons">
+                                ${actionButtons}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Show approval modal
+        function showApproveModal(profileId, profileName) {
+            currentActionProfile = profileId;
+            currentActionProfileName = profileName;
+            document.getElementById('approveName').textContent = profileName;
+            approvalModal.style.display = 'flex';
+        }
+        
+        // Show rejection modal
+        function showRejectModal(profileId, profileName) {
+            currentActionProfile = profileId;
+            currentActionProfileName = profileName;
+            document.getElementById('rejectName').textContent = profileName;
+            document.getElementById('rejectReason').value = '';
+            rejectionModal.style.display = 'flex';
+        }
+        
+        // Approve profile - FIXED VERSION
+        async function approveProfile() {
+            if (!currentActionProfile) {
+                showNotification('No profile selected', 'error');
+                return;
+            }
+            
+            console.log(`✅ Approving profile: ${currentActionProfile}`);
+            
+            // Show loading
+            const approveBtn = document.getElementById('confirmApprove');
+            const originalText = approveBtn.textContent;
+            approveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Approving...';
+            approveBtn.disabled = true;
+            
+            try {
+                // Call Worker endpoint
+                const response = await fetch(WORKER_URL + '/admin/approve', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        profileId: currentActionProfile
+                    })
+                });
+                
+                const result = await response.json();
+                console.log('Approve response:', result);
+                
+                if (result.success) {
+                    // Update local state
+                    const profileIndex = allProfiles.findIndex(p => p.id === currentActionProfile);
+                    if (profileIndex !== -1) {
+                        allProfiles[profileIndex] = result.profile;
+                    }
+                    
+                    // Update UI
+                    updateStats();
+                    displayProfiles();
+                    
+                    // Close modal
+                    approvalModal.style.display = 'none';
+                    currentActionProfile = null;
+                    currentActionProfileName = null;
+                    
+                    // Show success message
+                    showNotification('Profile approved successfully!', 'success');
+                    
+                    // Refresh the public dashboard after approval
+                    setTimeout(() => {
+                        if (window.opener && !window.opener.closed) {
+                            window.opener.location.reload();
+                        }
+                    }, 1000);
+                    
+                } else {
+                    showNotification(`Failed to approve: ${result.error || 'Unknown error'}`, 'error');
+                }
+                
+            } catch (error) {
+                console.error('Error approving profile:', error);
+                showNotification(`Failed to approve: ${error.message}`, 'error');
+            } finally {
+                // Reset button
+                approveBtn.textContent = originalText;
+                approveBtn.disabled = false;
+            }
+        }
+        
+        // Reject profile - FIXED VERSION
+        async function rejectProfile() {
+            if (!currentActionProfile) {
+                showNotification('No profile selected', 'error');
+                return;
+            }
+            
+            const reason = document.getElementById('rejectReason').value;
+            
+            console.log(`❌ Rejecting profile: ${currentActionProfile}, reason: ${reason || 'none'}`);
+            
+            // Show loading
+            const rejectBtn = document.getElementById('confirmReject');
+            const originalText = rejectBtn.textContent;
+            rejectBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Rejecting...';
+            rejectBtn.disabled = true;
+            
+            try {
+                // Call Worker endpoint
+                const response = await fetch(WORKER_URL + '/admin/reject', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        profileId: currentActionProfile,
+                        reason: reason
+                    })
+                });
+                
+                const result = await response.json();
+                console.log('Reject response:', result);
+                
+                if (result.success) {
+                    // Update local state
+                    const profileIndex = allProfiles.findIndex(p => p.id === currentActionProfile);
+                    if (profileIndex !== -1) {
+                        allProfiles[profileIndex] = result.profile;
+                    }
+                    
+                    // Update UI
+                    updateStats();
+                    displayProfiles();
+                    
+                    // Close modal
+                    rejectionModal.style.display = 'none';
+                    currentActionProfile = null;
+                    currentActionProfileName = null;
+                    
+                    // Show success message
+                    showNotification('Profile rejected successfully!', 'success');
+                    
+                } else {
+                    showNotification(`Failed to reject: ${result.error || 'Unknown error'}`, 'error');
+                }
+                
+            } catch (error) {
+                console.error('Error rejecting profile:', error);
+                showNotification(`Failed to reject: ${error.message}`, 'error');
+            } finally {
+                // Reset button
+                rejectBtn.textContent = originalText;
+                rejectBtn.disabled = false;
+            }
+        }
+        
+        // Show notification
+        function showNotification(message, type) {
+            // Remove existing notifications
+            document.querySelectorAll('.notification').forEach(n => n.remove());
+            
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 25px;
+                background: ${type === 'success' ? '#4caf50' : '#f44336'};
+                color: white;
+                border-radius: 10px;
+                box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+                z-index: 10000;
+                animation: slideIn 0.3s ease;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                max-width: 400px;
+            `;
+            notification.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+                <span>${message}</span>
+            `;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+        
+        // Add CSS for animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // Event Listeners
+        tabButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                tabButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentTab = btn.dataset.tab;
+                displayProfiles();
+            });
+        });
+        
+        // Modal event listeners
+        document.getElementById('cancelApprove').addEventListener('click', () => {
+            approvalModal.style.display = 'none';
+            currentActionProfile = null;
+            currentActionProfileName = null;
+        });
+        
+        document.getElementById('confirmApprove').addEventListener('click', approveProfile);
+        
+        document.getElementById('cancelReject').addEventListener('click', () => {
+            rejectionModal.style.display = 'none';
+            currentActionProfile = null;
+            currentActionProfileName = null;
+        });
+        
+        document.getElementById('confirmReject').addEventListener('click', rejectProfile);
+        
+        // Close modals when clicking outside
+        window.addEventListener('click', (e) => {
+            if (e.target === approvalModal) {
+                approvalModal.style.display = 'none';
+                currentActionProfile = null;
+                currentActionProfileName = null;
+            }
+            if (e.target === rejectionModal) {
+                rejectionModal.style.display = 'none';
+                currentActionProfile = null;
+                currentActionProfileName = null;
+            }
+        });
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadProfiles();
+            
+            // Auto-refresh every 60 seconds
+            setInterval(loadProfiles, 60000);
+            
+            // Test admin endpoints on load
+            testEndpoints();
+        });
+        
+        // Test if endpoints work
+        async function testEndpoints() {
+            console.log('🔍 Testing endpoints...');
+            
+            try {
+                // Test approve endpoint
+                const testResponse = await fetch(WORKER_URL + '/admin/approve', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ profileId: 'test-id' })
+                });
+                
+                // We expect 404 or 500 for test ID, that's OK - endpoint exists
+                console.log(`Approve endpoint: ${testResponse.status === 404 ? '✅ Working (test ID not found)' : '⚠️ Status: ' + testResponse.status}`);
+                
+            } catch (error) {
+                console.log('❌ Approve endpoint may not exist:', error.message);
+            }
+        }
+    </script>
+</body>
+</html>

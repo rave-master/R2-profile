@@ -283,7 +283,7 @@
         <div class="controls">
             <div class="stats">
                 <div class="stat-card">
-                    <h3>Total Profiles</h3>
+                    <h3>Approved Profiles</h3>
                     <p id="totalProfiles">0</p>
                 </div>
                 <div class="stat-card">
@@ -302,19 +302,25 @@
         <div class="profiles-grid" id="profilesGrid">
             <div class="loading">
                 <i class="fas fa-spinner fa-spin"></i>
-                <p>Loading profiles from Worker...</p>
+                <p>Loading approved profiles...</p>
             </div>
         </div>
         
         <div class="pagination" id="pagination" style="display: none;">
             <!-- Pagination buttons will be added here -->
         </div>
+        
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="admin-approval.html" style="color: white; text-decoration: none; display: inline-flex; align-items: center; gap: 10px; padding: 12px 25px; background: rgba(255, 255, 255, 0.2); border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.3);">
+                <i class="fas fa-user-shield"></i> Admin Approval Panel
+            </a>
+        </div>
     </div>
 
     <script>
-        // Configuration - USING CUSTOM DOMAIN
+        // Configuration
         const WORKER_URL = "https://secure-r2-upload.ravemaster.workers.dev";
-        const CDN_DOMAIN = "https://rave-master.de";  // CHANGED TO CUSTOM DOMAIN
+        const CDN_DOMAIN = "https://rave-master.de";
         let allProfiles = [];
         let currentPage = 1;
         const profilesPerPage = 6;
@@ -338,31 +344,33 @@
         
         // Load profiles from Worker
         async function loadProfiles() {
-            console.log('🔍 Loading profiles from Worker...');
+            console.log('🔍 Loading approved profiles...');
             profilesGrid.innerHTML = `
                 <div class="loading">
                     <i class="fas fa-spinner fa-spin"></i>
-                    <p>Loading profiles from Worker...</p>
+                    <p>Loading approved profiles...</p>
                 </div>
             `;
             
             try {
                 const response = await fetch(WORKER_URL + '/list');
-                
                 if (!response.ok) {
                     throw new Error(`Worker responded with ${response.status}`);
                 }
                 
-                allProfiles = await response.json();
-                console.log(`📊 Loaded ${allProfiles.length} profiles`);
+                const data = await response.json();
+                console.log(`📊 Received ${data.length} profiles from Worker`);
                 
+                // The Worker already returns only approved profiles
                 // Fix image URLs for all profiles
-                allProfiles = allProfiles.map(profile => {
+                allProfiles = data.map(profile => {
                     if (profile.imageUrl) {
                         profile.imageUrl = fixImageUrl(profile.imageUrl);
                     }
                     return profile;
                 });
+                
+                console.log(`✅ Filtered to ${allProfiles.length} approved profiles`);
                 
                 // Update stats
                 updateStats();
@@ -380,7 +388,10 @@
                 const localProfiles = JSON.parse(localStorage.getItem('worker_profiles') || '[]');
                 
                 if (localProfiles.length > 0) {
-                    allProfiles = localProfiles.map(profile => {
+                    // Filter to only approved profiles in local storage
+                    const approvedLocalProfiles = localProfiles.filter(p => p.adminStatus === 'approved');
+                    
+                    allProfiles = approvedLocalProfiles.map(profile => {
                         if (profile.imageUrl) {
                             profile.imageUrl = fixImageUrl(profile.imageUrl);
                         }
@@ -403,9 +414,10 @@
                     profilesGrid.innerHTML = `
                         <div class="empty-state">
                             <i class="fas fa-users-slash"></i>
-                            <h3>No Profiles Found</h3>
+                            <h3>No Approved Profiles Found</h3>
                             <p>${error.message}</p>
                             <p>Try refreshing or <a href="index.html">create a new profile</a>.</p>
+                            <p style="margin-top: 10px;"><small>Note: Profiles need admin approval before appearing here.</small></p>
                         </div>
                     `;
                 }
@@ -424,8 +436,9 @@
                 profilesGrid.innerHTML = `
                     <div class="empty-state">
                         <i class="fas fa-users-slash"></i>
-                        <h3>No Profiles Yet</h3>
+                        <h3>No Approved Profiles Yet</h3>
                         <p>Be the first to <a href="index.html">create a profile</a>!</p>
+                        <p style="margin-top: 10px;"><small>Note: Profiles need admin approval before appearing here.</small></p>
                     </div>
                 `;
                 return;
@@ -460,9 +473,9 @@
                 return `
                 <div class="profile-card">
                     <div class="card-header">
-                        <img src="${profile.imageUrl}" 
-     alt="${profile.fullName}"
-     onerror="console.error('Image failed:', this.src); this.src='https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&h=400&fit=crop'">
+                        <img src="${imageUrl}" 
+                             alt="${profile.fullName}"
+                             onerror="console.error('Image failed:', this.src); this.src='https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&h=400&fit=crop'">
                         <div class="role-badge">${profile.role || 'Unknown'}</div>
                     </div>
                     <div class="card-body">

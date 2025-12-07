@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug R2 Files</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .file { padding: 5px; border-bottom: 1px solid #eee; }
+        .json { background: #e8f5e9; }
+        .image { background: #e3f2fd; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>R2 Debug Tool</h1>
+    <button onclick="listFiles()">List All Files in R2</button>
+    <div id="result"></div>
+    
+    <script>
+        const WORKER_URL = "https://secure-r2-upload.ravemaster.workers.dev";
+        
+        async function listFiles() {
+            const result = document.getElementById('result');
+            result.innerHTML = '<p>Loading...</p>';
+            
+            try {
+                // First, test the test endpoint
+                const test = await fetch(WORKER_URL + '/test');
+                const testData = await test.json();
+                
+                result.innerHTML = `
+                    <h2>Test Endpoint Result:</h2>
+                    <pre>${JSON.stringify(testData, null, 2)}</pre>
+                `;
+                
+                // Try to get admin list
+                const admin = await fetch(WORKER_URL + '/admin/list');
+                const adminData = await admin.json();
+                
+                result.innerHTML += `
+                    <h2>Admin List Result:</h2>
+                    <pre>${JSON.stringify(adminData, null, 2)}</pre>
+                `;
+                
+                // Try to get public list
+                const publicList = await fetch(WORKER_URL + '/list');
+                const publicData = await publicList.json();
+                
+                result.innerHTML += `
+                    <h2>Public List Result:</h2>
+                    <pre>${JSON.stringify(publicData, null, 2)}</pre>
+                `;
+                
+            } catch (error) {
+                result.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

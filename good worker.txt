@@ -1,0 +1,355 @@
+export default {
+  async fetch(request, env) {
+    // Handle CORS preflight
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        headers: corsHeaders()
+      });
+    }
+
+    const url = new URL(request.url);
+    const CUSTOM_DOMAIN = "https://rave-master.de";
+
+    // ======== LIST ENDPOINT (GET /list) ========
+    if (request.method === "GET" && url.pathname.endsWith("/list")) {
+      try {
+        // List all objects in R2
+        const list = await env.R2.list();
+        
+        const profiles = [];
+        
+        // First, find all JSON files
+        for (const obj of list.objects) {
+          if (obj.key.endsWith('.json') && obj.key.startsWith('profile-')) {
+            try {
+              const data = await env.R2.get(obj.key);
+              const profile = JSON.parse(await data.text());
+              
+              // Extract ID from filename (profile-UUID.json)
+              const id = obj.key.replace('profile-', '').replace('.json', '');
+              
+              // Find the corresponding image file
+              let imageFile = null;
+              for (const imgObj of list.objects) {
+                // Check if this is an image file with the same ID
+                if (imgObj.key.startsWith(`profile-${id}.`)) {
+                  const ext = imgObj.key.split('.').pop().toLowerCase();
+                  if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {  // FIXED: removed extra dot
+                    imageFile = imgObj.key;
+                    break;
+                  }
+                }
+              }
+              
+              // Set the image URL - ALWAYS use custom domain
+              if (imageFile) {
+                profile.imageUrl = `${CUSTOM_DOMAIN}/${imageFile}`;
+                profile.photoFileName = imageFile;
+              } else {
+                // If no image found, try common extensions
+                const extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+                for (const ext of extensions) {
+                  const possibleFile = `profile-${id}${ext}`;
+                  if (list.objects.some(obj => obj.key === possibleFile)) {
+                    profile.imageUrl = `${CUSTOM_DOMAIN}/${possibleFile}`;
+                    profile.photoFileName = possibleFile;
+                    imageFile = possibleFile;
+                    break;
+                  }
+                }
+                
+                // Still no image found - use fallback
+                if (!imageFile) {
+                  profile.imageUrl = `${CUSTOM_DOMAIN}/profile-${id}.jpg`;
+                  profile.photoFileName = `profile-${id}.jpg`;
+                }
+              }
+              
+              // Set default adminStatus for existing profiles
+              if (!profile.adminStatus) {
+                profile.adminStatus = 'pending';
+              }
+              
+              profiles.push(profile);
+            } catch (err) {
+              console.error(`Error processing ${obj.key}:`, err);
+            }
+          }
+        }
+        
+        // Filter: Public /list endpoint shows only approved profiles
+        const approvedProfiles = profiles.filter(p => p.adminStatus === 'approved');
+        return jsonResponse(approvedProfiles);
+        
+      } catch (err) {
+        return jsonResponse({ success: false, error: err.message }, 500);
+      }
+    }
+
+    // ======== ADMIN LIST ENDPOINT (GET /admin/list) ========
+    if (request.method === "GET" && url.pathname === "/admin/list") {
+      try {
+        const list = await env.R2.list();
+        const profiles = [];
+        
+        for (const obj of list.objects) {
+          if (obj.key.endsWith('.json') && obj.key.startsWith('profile-')) {
+            try {
+              const data = await env.R2.get(obj.key);
+              const profile = JSON.parse(await data.text());
+              
+              // Add admin status (default to 'pending' if not set)
+              if (!profile.adminStatus) {
+                profile.adminStatus = 'pending';
+              }
+              
+              // Get image URL
+              const id = obj.key.replace('profile-', '').replace('.json', '');
+              const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+              let imageFound = false;
+              
+              for (const imgObj of list.objects) {
+                for (const ext of imageExtensions) {
+                  if (imgObj.key === `profile-${id}${ext}`) {
+                    profile.imageUrl = `${CUSTOM_DOMAIN}/${imgObj.key}`;
+                    imageFound = true;
+                    break;
+                  }
+                }
+                if (imageFound) break;
+              }
+              
+              profiles.push(profile);
+            } catch (err) {
+              console.error(`Error processing ${obj.key}:`, err);
+            }
+          }
+        }
+        
+        return jsonResponse(profiles);
+      } catch (err) {
+        return jsonResponse({ success: false, error: err.message }, 500);
+      }
+    }
+
+    // ======== UPLOAD ENDPOINT (POST /) ========
+    if (request.method === "POST" && url.pathname === "/") {
+      try {
+        const form = await request.formData();
+        const file = form.get("file");
+        const profileData = JSON.parse(form.get("data"));
+
+        if (!file) {
+          return jsonResponse({ success: false, error: "No file provided" }, 400);
+        }
+
+        // Generate unique ID
+        const profileId = crypto.randomUUID();
+        const fileExt = file.name.split('.').pop().toLowerCase();
+        const imageFileName = `profile-${profileId}.${fileExt}`;
+        const jsonFileName = `profile-${profileId}.json`;
+        const imageUrl = `${CUSTOM_DOMAIN}/${imageFileName}`;
+
+        // Upload image to R2
+        await env.R2.put(imageFileName, file.stream(), {
+          httpMetadata: { 
+            contentType: file.type,
+            cacheControl: 'public, max-age=31536000'
+          }
+        });
+
+        // Create complete profile object WITH adminStatus
+        const profileJson = {
+          id: profileId,
+          fullName: profileData.fullName || "",
+          email: profileData.email || "",
+          bio: profileData.bio || "",
+          role: profileData.role || "Not specified",
+          photoFileName: imageFileName,
+          imageUrl: imageUrl,
+          jsonUrl: `${CUSTOM_DOMAIN}/${jsonFileName}`,
+          createdAt: new Date().toISOString(),
+          adminStatus: 'pending', // NEW: All new profiles start as pending
+          submittedAt: new Date().toISOString()
+        };
+
+        // Upload JSON metadata
+        await env.R2.put(jsonFileName, JSON.stringify(profileJson), {
+          httpMetadata: { 
+            contentType: 'application/json',
+            cacheControl: 'public, max-age=31536000'
+          }
+        });
+
+        // Return success response
+        return jsonResponse({
+          success: true,
+          message: "Profile submitted for approval",
+          profile: profileJson,
+          imageUrl: imageUrl,
+          jsonUrl: `${CUSTOM_DOMAIN}/${jsonFileName}`,
+          note: "Profile will be visible after admin approval"
+        });
+
+      } catch (err) {
+        return jsonResponse({ success: false, error: err.message }, 500);
+      }
+    }
+
+    // ======== ADMIN APPROVE ENDPOINT (POST /admin/approve) ========
+    if (request.method === "POST" && url.pathname === "/admin/approve") {
+      try {
+        const { profileId } = await request.json();
+        
+        // Get the JSON file
+        const jsonKey = `profile-${profileId}.json`;
+        const jsonFile = await env.R2.get(jsonKey);
+        
+        if (!jsonFile) {
+          return jsonResponse({ success: false, error: "Profile not found" }, 404);
+        }
+        
+        const profile = JSON.parse(await jsonFile.text());
+        profile.adminStatus = 'approved';
+        profile.approvedAt = new Date().toISOString();
+        
+        // Update the JSON file
+        await env.R2.put(jsonKey, JSON.stringify(profile), {
+          httpMetadata: { 
+            contentType: 'application/json',
+            cacheControl: 'public, max-age=31536000'
+          }
+        });
+        
+        return jsonResponse({
+          success: true,
+          message: "Profile approved successfully",
+          profile: profile
+        });
+        
+      } catch (err) {
+        return jsonResponse({ success: false, error: err.message }, 500);
+      }
+    }
+
+    // ======== ADMIN REJECT ENDPOINT (POST /admin/reject) ========
+    if (request.method === "POST" && url.pathname === "/admin/reject") {
+      try {
+        const { profileId, reason } = await request.json();
+        
+        const jsonKey = `profile-${profileId}.json`;
+        const jsonFile = await env.R2.get(jsonKey);
+        
+        if (!jsonFile) {
+          return jsonResponse({ success: false, error: "Profile not found" }, 404);
+        }
+        
+        const profile = JSON.parse(await jsonFile.text());
+        profile.adminStatus = 'rejected';
+        profile.rejectedAt = new Date().toISOString();
+        if (reason) profile.rejectReason = reason;
+        
+        await env.R2.put(jsonKey, JSON.stringify(profile), {
+          httpMetadata: { 
+            contentType: 'application/json',
+            cacheControl: 'public, max-age=31536000'
+          }
+        });
+        
+        return jsonResponse({
+          success: true,
+          message: "Profile rejected successfully",
+          profile: profile
+        });
+        
+      } catch (err) {
+        return jsonResponse({ success: false, error: err.message }, 500);
+      }
+    }
+
+    // ======== DIRECT FILE ACCESS (GET /file/{filename}) ========
+    if (request.method === "GET" && url.pathname.startsWith("/file/")) {
+      try {
+        const filename = url.pathname.replace("/file/", "");
+        const file = await env.R2.get(filename);
+        
+        if (!file) {
+          return new Response("File not found", { status: 404 });
+        }
+        
+        const headers = new Headers();
+        headers.set("Content-Type", file.httpMetadata?.contentType || "application/octet-stream");
+        headers.set("Cache-Control", "public, max-age=31536000");
+        headers.set("Access-Control-Allow-Origin", "*");
+        
+        return new Response(file.body, { headers });
+      } catch (err) {
+        return new Response("Error fetching file", { status: 500 });
+      }
+    }
+
+    // ======== HEALTH CHECK (GET /health) ========
+    if (request.method === "GET" && url.pathname === "/health") {
+      return jsonResponse({
+        status: "healthy",
+        timestamp: new Date().toISOString(),
+        bucket: "user-profiles",
+        customDomain: CUSTOM_DOMAIN
+      });
+    }
+
+    // ======== TEST ENDPOINT (GET /test) ========
+    if (request.method === "GET" && url.pathname === "/test") {
+      try {
+        const list = await env.R2.list();
+        return jsonResponse({
+          message: "Worker is working",
+          customDomain: CUSTOM_DOMAIN,
+          totalFiles: list.objects.length,
+          sampleImageUrl: `${CUSTOM_DOMAIN}/profile-5fff00eb-22b7-49a9-81e6-df58274420a8.jpg`,
+          sampleJsonUrl: `${CUSTOM_DOMAIN}/profile-5fff00eb-22b7-49a9-81e6-df58274420a8.json`
+        });
+      } catch (err) {
+        return jsonResponse({ error: err.message }, 500);
+      }
+    }
+
+    // ======== DEFAULT RESPONSE ========
+    return jsonResponse({
+      endpoints: {
+        "POST /": "Upload profile with photo",
+        "GET /list": "List APPROVED profiles (public)",
+        "GET /admin/list": "List ALL profiles with admin status",
+        "POST /admin/approve": "Approve a profile",
+        "POST /admin/reject": "Reject a profile",
+        "GET /file/{filename}": "Get specific file",
+        "GET /health": "Health check",
+        "GET /test": "Test endpoint"
+      },
+      customDomain: CUSTOM_DOMAIN
+    }, 200);
+  }
+};
+
+// ========================
+// Helper functions
+// ========================
+
+function corsHeaders() {
+  return {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Max-Age": "86400",
+  };
+}
+
+function jsonResponse(obj, status = 200) {
+  return new Response(JSON.stringify(obj, null, 2), {
+    status,
+    headers: {
+      "Content-Type": "application/json",
+      ...corsHeaders()
+    }
+  });
+}

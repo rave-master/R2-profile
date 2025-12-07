@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profiles Dashboard | R2 Storage</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            padding: 20px;
+        }
+        
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .search-box {
+            position: relative;
+            max-width: 400px;
+            width: 100%;
+        }
+        
+        .search-box input {
+            width: 100%;
+            padding: 15px 20px 15px 50px;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+        }
+        
+        .search-box input:focus {
+            outline: none;
+            transform: translateY(-2px);
+        }
+        
+        .search-box i {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #7c3aed;
+        }
+        
+        .filter-btn {
+            background: white;
+            border: none;
+            padding: 0 25px;
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            color: #4f46e5;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+        }
+        
+        .filter-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .add-profile-btn {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(79, 70, 229, 0.3);
+            transition: all 0.3s;
+            text-decoration: none;
+        }
+        
+        .add-profile-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 35px rgba(79, 70, 229, 0.4);
+        }
+        
+        .carousel-container {
+            position: relative;
+            max-width: 1200px;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+        
+        .profiles-carousel {
+            display: flex;
+            gap: 25px;
+            padding: 20px;
+            overflow-x: auto;
+            scroll-behavior: smooth;
+            scrollbar-width: none; /* Firefox */
+        }
+        
+        .profiles-carousel::-webkit-scrollbar {
+            display: none; /* Chrome, Safari */
+        }
+        
+        .profile-card {
+            flex: 0 0 320px;
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+            transition: all 0.4s;
+            opacity: 0;
+            animation: fadeIn 0.5s forwards;
+        }
+        
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+        
+        .profile-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+        }
+        
+        .card-header {
+            height: 200px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .card-header img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s;
+        }
+        
+        .profile-card:hover .card-header img {
+            transform: scale(1.05);
+        }
+        
+        .role-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(79, 70, 229, 0.9);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 50px;
+            font-size: 14px;
+            font-weight: 600;
+            backdrop-filter: blur(5px);
+        }
+        
+        .card-body {
+            padding: 25px;
+        }
+        
+        .profile-name {
+            font-size: 24px;
+            color: #1f2937;
+            margin-bottom: 10px;
+        }
+        
+        .profile-email {
+            color: #7c3aed;
+            margin-bottom: 15px;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .profile-bio {
+            color: #6b7280;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            font-size: 15px;
+        }
+        
+        .profile-meta {
+            display: flex;
+            justify-content: space-between;
+            color: #9ca3af;
+            font-size: 14px;
+            border-top: 1px solid #f3f4f6;
+            padding-top: 15px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .empty-state i {
+            font-size: 80px;
+            margin-bottom: 20px;
+            opacity: 0.8;
+        }
+        
+        .empty-state h3 {
+            font-size: 28px;
+            margin-bottom: 15px;
+        }
+        
+        .nav-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 30px;
+        }
+        
+        .nav-btn {
+            background: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+            font-size: 20px;
+            color: #4f46e5;
+        }
+        
+        .nav-btn:hover {
+            transform: translateY(-3px);
+            background: #4f46e5;
+            color: white;
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 26px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .search-box, .filter-btn, .add-profile-btn {
+                width: 100%;
+                max-width: 400px;
+            }
+            
+            .profile-card {
+                flex: 0 0 280px;
+            }
+            
+            .nav-buttons {
+                display: none;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+            
+            .profile-card {
+                flex: 0 0 260px;
+            }
+            
+            .card-body {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><i class="fas fa-users"></i> Profiles Dashboard</h1>
+        <p>Browse all profiles stored in Cloudflare R2 Storage</p>
+    </div>
+    
+    <div class="controls">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchInput" placeholder="Search profiles by name or role...">
+        </div>
+        
+        <button class="filter-btn" id="filterBtn">
+            <i class="fas fa-filter"></i> Filter
+        </button>
+        
+        <a href="index.html" class="add-profile-btn">
+            <i class="fas fa-plus"></i> Add New Profile
+        </a>
+    </div>
+    
+    <div class="carousel-container">
+        <div class="profiles-carousel" id="profilesCarousel">
+            <!-- Profiles will be loaded here -->
+        </div>
+        
+        <div class="nav-buttons">
+            <button class="nav-btn" id="prevBtn">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <button class="nav-btn" id="nextBtn">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+    
+    <script>
+        // Sample data (in real app, this would come from R2 API)
+        const sampleProfiles = [
+            {
+                id: "1",
+                fullName: "Alex Johnson",
+                email: "alex@example.com",
+                bio: "Full-stack developer with passion for cloud technologies and UI/UX design.",
+                role: "Developer",
+                photoUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop",
+                createdAt: "2024-01-15T10:30:00Z"
+            },
+            {
+                id: "2",
+                fullName: "Maria Garcia",
+                email: "maria@example.com",
+                bio: "Product designer focusing on creating beautiful and functional user interfaces.",
+                role: "Designer",
+                photoUrl: "https://images.unsplash.com/photo-1494790108755-2616b786d4d1?w-400&h=400&fit=crop",
+                createdAt: "2024-01-18T14:20:00Z"
+            },
+            {
+                id: "3",
+                fullName: "David Chen",
+                email: "david@example.com",
+                bio: "Project manager with 8 years experience in tech startups and agile methodologies.",
+                role: "Manager",
+                photoUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w-400&h=400&fit=crop",
+                createdAt: "2024-01-20T09:15:00Z"
+            },
+            {
+                id: "4",
+                fullName: "Sarah Williams",
+                email: "sarah@example.com",
+                bio: "Computer science student passionate about machine learning and data visualization.",
+                role: "Student",
+                photoUrl: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w-400&h=400&fit=crop",
+                createdAt: "2024-01-22T16:45:00Z"
+            }
+        ];
+
+        // DOM Elements
+        const profilesCarousel = document.getElementById('profilesCarousel');
+        const searchInput = document.getElementById('searchInput');
+        const filterBtn = document.getElementById('filterBtn');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+
+        // Load profiles from localStorage or use sample data
+        function loadProfiles() {
+            let profiles = JSON.parse(localStorage.getItem('r2_profiles'));
+            
+            if (!profiles || profiles.length === 0) {
+                profiles = sampleProfiles;
+                localStorage.setItem('r2_profiles', JSON.stringify(profiles));
+            }
+            
+            displayProfiles(profiles);
+            return profiles;
+        }
+
+        // Display profiles in carousel
+        function displayProfiles(profiles) {
+            if (profiles.length === 0) {
+                profilesCarousel.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-users-slash"></i>
+                        <h3>No Profiles Found</h3>
+                        <p>No profiles match your search criteria.</p>
+                        <p><a href="index.html" style="color: white; text-decoration: underline;">Create the first profile</a></p>
+                    </div>
+                `;
+                return;
+            }
+            
+            profilesCarousel.innerHTML = profiles.map(profile => `
+                <div class="profile-card" data-id="${profile.id}">
+                    <div class="card-header">
+                        <img src="${profile.photoUrl}" alt="${profile.fullName}">
+                        <div class="role-badge">${profile.role}</div>
+                    </div>
+                    <div class="card-body">
+                        <h3 class="profile-name">${profile.fullName}</h3>
+                        <div class="profile-email">
+                            <i class="fas fa-envelope"></i> ${profile.email}
+                        </div>
+                        <p class="profile-bio">${profile.bio}</p>
+                        <div class="profile-meta">
+                            <span><i class="far fa-calendar"></i> ${formatDate(profile.createdAt)}</span>
+                            <span><i class="fas fa-id-card"></i> ID: ${profile.id.substring(0, 8)}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Format date
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+            });
+        }
+
+        // Search functionality
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const allProfiles = JSON.parse(localStorage.getItem('r2_profiles') || '[]');
+            
+            if (searchTerm.trim() === '') {
+                displayProfiles(allProfiles);
+                return;
+            }
+            
+            const filtered = allProfiles.filter(profile => 
+                profile.fullName.toLowerCase().includes(searchTerm) ||
+                profile.role.toLowerCase().includes(searchTerm) ||
+                profile.email.toLowerCase().includes(searchTerm) ||
+                profile.bio.toLowerCase().includes(searchTerm)
+            );
+            
+            displayProfiles(filtered);
+        });
+
+        // Filter by role
+        filterBtn.addEventListener('click', function() {
+            const roles = [...new Set(sampleProfiles.map(p => p.role))];
+            const filterText = prompt(`Filter by role:\n${roles.join(', ')}\n\nEnter role name or leave empty for all:`, '');
+            
+            if (filterText === null) return;
+            
+            const allProfiles = JSON.parse(localStorage.getItem('r2_profiles') || '[]');
+            
+            if (filterText.trim() === '') {
+                displayProfiles(allProfiles);
+                return;
+            }
+            
+            const filtered = allProfiles.filter(profile => 
+                profile.role.toLowerCase().includes(filterText.toLowerCase())
+            );
+            
+            displayProfiles(filtered);
+        });
+
+        // Carousel navigation
+        prevBtn.addEventListener('click', () => {
+            profilesCarousel.scrollBy({ left: -350, behavior: 'smooth' });
+        });
+
+        nextBtn.addEventListener('click', () => {
+            profilesCarousel.scrollBy({ left: 350, behavior: 'smooth' });
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') {
+                profilesCarousel.scrollBy({ left: -350, behavior: 'smooth' });
+            } else if (e.key === 'ArrowRight') {
+                profilesCarousel.scrollBy({ left: 350, behavior: 'smooth' });
+            }
+        });
+
+        // Touch/swipe support for mobile
+        let startX = 0;
+        profilesCarousel.addEventListener('touchstart', (e) => {
+            startX = e.touches[0].clientX;
+        });
+
+        profilesCarousel.addEventListener('touchend', (e) => {
+            const endX = e.changedTouches[0].clientX;
+            const diff = startX - endX;
+            
+            if (Math.abs(diff) > 50) { // Minimum swipe distance
+                if (diff > 0) {
+                    // Swipe left - go next
+                    profilesCarousel.scrollBy({ left: 350, behavior: 'smooth' });
+                } else {
+                    // Swipe right - go previous
+                    profilesCarousel.scrollBy({ left: -350, behavior: 'smooth' });
+                }
+            }
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadProfiles();
+        });
+    </script>
+</body>
+</html>

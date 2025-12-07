@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Profile | R2 Storage</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 500px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 15px;
+        }
+        
+        .form-container {
+            padding: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 15px;
+        }
+        
+        input, textarea, select {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+        
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .photo-upload {
+            border: 3px dashed #d1d5db;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .photo-upload:hover {
+            border-color: #4f46e5;
+            background: #f8fafc;
+        }
+        
+        .photo-upload i {
+            font-size: 48px;
+            color: #9ca3af;
+            margin-bottom: 15px;
+        }
+        
+        .photo-preview {
+            display: none;
+            max-width: 200px;
+            max-height: 200px;
+            margin: 15px auto;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .photo-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .submit-btn {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            width: 100%;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(79, 70, 229, 0.3);
+        }
+        
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+        
+        .loading {
+            display: none;
+        }
+        
+        .success-message {
+            background: #10b981;
+            color: white;
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: 20px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .error-message {
+            background: #ef4444;
+            color: white;
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .nav-link {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .nav-link a {
+            color: #4f46e5;
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                margin: 10px;
+                border-radius: 16px;
+            }
+            
+            .form-container {
+                padding: 20px;
+            }
+            
+            .header {
+                padding: 25px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-user-plus"></i> Create Profile</h1>
+            <p>Upload your photo and information to Cloudflare R2</p>
+        </div>
+        
+        <div class="form-container">
+            <div class="form-group">
+                <label for="fullName"><i class="fas fa-user"></i> Full Name</label>
+                <input type="text" id="fullName" placeholder="Enter your full name" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="email"><i class="fas fa-envelope"></i> Email Address</label>
+                <input type="email" id="email" placeholder="Enter your email" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="bio"><i class="fas fa-edit"></i> Bio / Description</label>
+                <textarea id="bio" placeholder="Tell us about yourself..."></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="role"><i class="fas fa-briefcase"></i> Role / Position</label>
+                <select id="role">
+                    <option value="">Select your role</option>
+                    <option value="Developer">Developer</option>
+                    <option value="Designer">Designer</option>
+                    <option value="Manager">Manager</option>
+                    <option value="Student">Student</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label><i class="fas fa-camera"></i> Profile Photo</label>
+                <div class="photo-upload" id="photoUpload">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Click to upload photo (Max 5MB)</p>
+                    <p><small>JPG, PNG or GIF supported</small></p>
+                </div>
+                <input type="file" id="photoInput" accept="image/*" style="display: none;">
+                <div class="photo-preview" id="photoPreview"></div>
+            </div>
+            
+            <button class="submit-btn" id="submitBtn">
+                <span class="btn-text">Create Profile</span>
+                <span class="loading"><i class="fas fa-spinner fa-spin"></i> Uploading...</span>
+            </button>
+            
+            <div class="success-message" id="successMessage">
+                <i class="fas fa-check-circle"></i>
+                <span>Profile created successfully! Redirecting...</span>
+            </div>
+            
+            <div class="error-message" id="errorMessage"></div>
+            
+            <div class="nav-link">
+                <a href="dashboard.html"><i class="fas fa-th-large"></i> View All Profiles Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- R2 Configuration -->
+    <script>
+        // Your R2 Configuration
+        const R2_CONFIG = {
+            accountId: "86684c814a2fe7dd897881493ef8cc18",
+            endpoint: "https://86684c814a2fe7dd897881493ef8cc18.r2.cloudflarestorage.com",
+            bucketName: "user-profiles", // Auto-created bucket
+            accessKeyId: "9a0352676d5eee43551f0bbc52ba0132", // You'll need to add this from R2 dashboard
+            secretAccessKey: "c1667dd264e11a2f354d07dd9f4ceb8ff3f9d2074d592680a80d53936ff861a1" // You'll need to add this from R2 dashboard
+        };
+
+        // DOM Elements
+        const photoUpload = document.getElementById('photoUpload');
+        const photoInput = document.getElementById('photoInput');
+        const photoPreview = document.getElementById('photoPreview');
+        const submitBtn = document.getElementById('submitBtn');
+        const successMessage = document.getElementById('successMessage');
+        const errorMessage = document.getElementById('errorMessage');
+        const formInputs = ['fullName', 'email', 'bio', 'role'];
+
+        // Photo Upload Handler
+        photoUpload.addEventListener('click', () => photoInput.click());
+        
+        photoInput.addEventListener('change', function(e) {
+            if (this.files && this.files[0]) {
+                const file = this.files[0];
+                
+                // Validate file size (5MB max)
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('File size must be less than 5MB');
+                    return;
+                }
+                
+                // Validate file type
+                if (!file.type.match('image.*')) {
+                    alert('Please select an image file');
+                    return;
+                }
+                
+                // Preview image
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    photoPreview.style.display = 'block';
+                    photoPreview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Generate unique ID
+        function generateId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+
+        // Upload to R2
+        async function uploadToR2(file, profileData) {
+            try {
+                // In a real implementation, you would use AWS SDK
+                // For security, this should be done via a backend server
+                
+                // Simulate upload process
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                
+                // Generate filename
+                const fileExt = file.name.split('.').pop();
+                const fileName = `profile-${generateId()}.${fileExt}`;
+                const profileId = generateId();
+                
+                // Create profile data file
+                const profileJson = {
+                    id: profileId,
+                    ...profileData,
+                    photoUrl: fileName,
+                    createdAt: new Date().toISOString()
+                };
+                
+                // In real implementation:
+                // 1. Upload image file to R2
+                // 2. Upload profile JSON to R2
+                // 3. Return the URLs
+                
+                // For demo, store in localStorage
+                const profiles = JSON.parse(localStorage.getItem('r2_profiles') || '[]');
+                profiles.push(profileJson);
+                localStorage.setItem('r2_profiles', JSON.stringify(profiles));
+                
+                return {
+                    success: true,
+                    profileId: profileId,
+                    fileName: fileName
+                };
+                
+            } catch (error) {
+                console.error('Upload error:', error);
+                return { success: false, error: error.message };
+            }
+        }
+
+        // Form Submission
+        submitBtn.addEventListener('click', async function() {
+            // Validate form
+            let isValid = true;
+            formInputs.forEach(id => {
+                const element = document.getElementById(id);
+                if (element.required && !element.value.trim()) {
+                    isValid = false;
+                    element.style.borderColor = '#ef4444';
+                } else {
+                    element.style.borderColor = '#e5e7eb';
+                }
+            });
+            
+            if (!photoInput.files[0]) {
+                isValid = false;
+                photoUpload.style.borderColor = '#ef4444';
+                photoUpload.innerHTML = `<i class="fas fa-exclamation-circle"></i><p>Photo is required!</p>`;
+            }
+            
+            if (!isValid) {
+                showError('Please fill in all required fields');
+                return;
+            }
+            
+            // Get form data
+            const profileData = {
+                fullName: document.getElementById('fullName').value,
+                email: document.getElementById('email').value,
+                bio: document.getElementById('bio').value,
+                role: document.getElementById('role').value || 'Not specified'
+            };
+            
+            // Show loading
+            submitBtn.querySelector('.btn-text').style.display = 'none';
+            submitBtn.querySelector('.loading').style.display = 'block';
+            submitBtn.disabled = true;
+            
+            // Upload
+            const result = await uploadToR2(photoInput.files[0], profileData);
+            
+            if (result.success) {
+                showSuccess();
+                // Redirect to dashboard after 2 seconds
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 2000);
+            } else {
+                showError('Upload failed: ' + result.error);
+                submitBtn.querySelector('.btn-text').style.display = 'block';
+                submitBtn.querySelector('.loading').style.display = 'none';
+                submitBtn.disabled = false;
+            }
+        });
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            successMessage.style.display = 'none';
+            
+            // Auto hide error
+            setTimeout(() => {
+                errorMessage.style.display = 'none';
+            }, 5000);
+        }
+
+        function showSuccess() {
+            successMessage.style.display = 'flex';
+            errorMessage.style.display = 'none';
+        }
+
+        // Input validation styling
+        formInputs.forEach(id => {
+            const element = document.getElementById(id);
+            element.addEventListener('input', function() {
+                this.style.borderColor = '#e5e7eb';
+            });
+        });
+    </script>
+</body>
+</html>

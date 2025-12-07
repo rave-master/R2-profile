@@ -186,6 +186,38 @@
             gap: 8px;
         }
         
+        .credentials-info {
+            background: #f0f9ff;
+            border: 2px solid #0ea5e9;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        
+        .credentials-info h3 {
+            color: #0369a1;
+            margin-bottom: 10px;
+        }
+        
+        .credentials-info .status {
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            margin-top: 10px;
+            display: inline-block;
+        }
+        
+        .status.connected {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .status.disconnected {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
         @media (max-width: 600px) {
             .container {
                 margin: 10px;
@@ -210,6 +242,15 @@
         </div>
         
         <div class="form-container">
+            <div class="credentials-info">
+                <h3><i class="fas fa-cloud"></i> R2 Storage Status</h3>
+                <p><strong>Account:</strong> 86684c814a2fe7dd897881493ef8cc18</p>
+                <p><strong>Bucket:</strong> user-profiles</p>
+                <div class="status connected" id="connectionStatus">
+                    <i class="fas fa-check-circle"></i> Connected to R2
+                </div>
+            </div>
+            
             <div class="form-group">
                 <label for="fullName"><i class="fas fa-user"></i> Full Name</label>
                 <input type="text" id="fullName" placeholder="Enter your full name" required>
@@ -249,199 +290,324 @@
             </div>
             
             <button class="submit-btn" id="submitBtn">
-                <span class="btn-text">Create Profile</span>
+                <span class="btn-text">Upload to R2</span>
                 <span class="loading"><i class="fas fa-spinner fa-spin"></i> Uploading...</span>
             </button>
             
             <div class="success-message" id="successMessage">
                 <i class="fas fa-check-circle"></i>
-                <span>Profile created successfully! Redirecting...</span>
+                <div>
+                    <span id="successText">Profile created successfully!</span>
+                    <div style="margin-top: 10px; font-size: 14px;" id="uploadDetails"></div>
+                </div>
             </div>
             
             <div class="error-message" id="errorMessage"></div>
             
             <div class="nav-link">
-                <a href="dashboard.html"><i class="fas fa-th-large"></i> View All Profiles Dashboard</a>
+                <a href="dashboard.html"><i class="fas fa-th-large"></i> View All Profiles</a>
+                <a href="r2-manager.html" style="margin-top: 10px; display: inline-block;">
+                    <i class="fas fa-database"></i> Manage R2 Files
+                </a>
             </div>
         </div>
     </div>
 
-    <!-- R2 Configuration -->
-    <script>
-        // Your R2 Configuration
-        const R2_CONFIG = {
-            accountId: "86684c814a2fe7dd897881493ef8cc18",
-            endpoint: "https://86684c814a2fe7dd897881493ef8cc18.r2.cloudflarestorage.com",
-            bucketName: "user-profiles", // Auto-created bucket
-            accessKeyId: "9a0352676d5eee43551f0bbc52ba0132", // You'll need to add this from R2 dashboard
-            secretAccessKey: "c1667dd264e11a2f354d07dd9f4ceb8ff3f9d2074d592680a80d53936ff861a1" // You'll need to add this from R2 dashboard
-        };
+    <!-- Include AWS SDK for browser -->
+    <script src="https://cdn.jsdelivr.net/npm/aws-sdk@2.1492.0/dist/aws-sdk.min.js"></script>
+    
+    <<script>
+    // R2 Configuration - FIXED
+    const R2_CONFIG = {
+        accountId: "86684c814a2fe7dd897881493ef8cc18",
+        endpoint: "https://86684c814a2fe7dd897881493ef8cc18.r2.cloudflarestorage.com",
+        bucketName: "user-profiles",
+        accessKeyId: "9a0352676d5eee43551f0bbc52ba0132",
+        secretAccessKey: "2766e41499c9c90de55867bfc14e29e6a9b27d802903a22f8310654f5d1e7406"
+    };
 
-        // DOM Elements
-        const photoUpload = document.getElementById('photoUpload');
-        const photoInput = document.getElementById('photoInput');
-        const photoPreview = document.getElementById('photoPreview');
-        const submitBtn = document.getElementById('submitBtn');
-        const successMessage = document.getElementById('successMessage');
-        const errorMessage = document.getElementById('errorMessage');
-        const formInputs = ['fullName', 'email', 'bio', 'role'];
+    // DOM Elements
+    const photoUpload = document.getElementById('photoUpload');
+    const photoInput = document.getElementById('photoInput');
+    const photoPreview = document.getElementById('photoPreview');
+    const submitBtn = document.getElementById('submitBtn');
+    const successMessage = document.getElementById('successMessage');
+    const successText = document.getElementById('successText');
+    const uploadDetails = document.getElementById('uploadDetails');
+    const errorMessage = document.getElementById('errorMessage');
+    const connectionStatus = document.getElementById('connectionStatus');
+    const formInputs = ['fullName', 'email', 'bio', 'role'];
 
-        // Photo Upload Handler
-        photoUpload.addEventListener('click', () => photoInput.click());
-        
-        photoInput.addEventListener('change', function(e) {
-            if (this.files && this.files[0]) {
-                const file = this.files[0];
-                
-                // Validate file size (5MB max)
-                if (file.size > 5 * 1024 * 1024) {
-                    alert('File size must be less than 5MB');
-                    return;
-                }
-                
-                // Validate file type
-                if (!file.type.match('image.*')) {
-                    alert('Please select an image file');
-                    return;
-                }
-                
-                // Preview image
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    photoPreview.style.display = 'block';
-                    photoPreview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
-                }
-                reader.readAsDataURL(file);
-            }
-        });
+    // Initialize AWS S3 client for R2 - FIXED VERSION
+    AWS.config.update({
+        accessKeyId: R2_CONFIG.accessKeyId,
+        secretAccessKey: R2_CONFIG.secretAccessKey,
+        region: 'auto'
+    });
+    
+    AWS.config.update({
+        s3ForcePathStyle: true,
+        endpoint: R2_CONFIG.endpoint
+    });
+    
+    const s3 = new AWS.S3();
 
-        // Generate unique ID
-        function generateId() {
-            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+    // Test connection
+    async function testConnection() {
+        try {
+            const params = {
+                Bucket: R2_CONFIG.bucketName,
+                MaxKeys: 1
+            };
+            
+            await s3.listObjectsV2(params).promise();
+            connectionStatus.innerHTML = '<i class="fas fa-check-circle"></i> Connected to R2';
+            connectionStatus.className = 'status connected';
+            return true;
+        } catch (error) {
+            console.warn('Connection test failed:', error.message);
+            connectionStatus.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Connection failed: ${error.message}`;
+            connectionStatus.className = 'status disconnected';
+            return false;
         }
+    }
 
-        // Upload to R2
-        async function uploadToR2(file, profileData) {
+    // Photo Upload Handler
+    photoUpload.addEventListener('click', () => photoInput.click());
+    
+    photoInput.addEventListener('change', function(e) {
+        if (this.files && this.files[0]) {
+            const file = this.files[0];
+            
+            if (file.size > 5 * 1024 * 1024) {
+                alert('File size must be less than 5MB');
+                return;
+            }
+            
+            if (!file.type.match('image.*')) {
+                alert('Please select an image file');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                photoPreview.style.display = 'block';
+                photoPreview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+            }
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // Generate unique ID
+    function generateId() {
+        return Date.now().toString(36) + Math.random().toString(36).substr(2);
+    }
+
+    // SIMPLE UPLOAD FUNCTION THAT WORKS
+    async function uploadToR2Simple(file, profileData) {
+        try {
+            const profileId = generateId();
+            const fileExt = file.name.split('.').pop().toLowerCase();
+            const fileName = `profile-${profileId}.${fileExt}`;
+            
+            // Create profile JSON
+            const profileJson = {
+                id: profileId,
+                ...profileData,
+                photoFileName: fileName,
+                createdAt: new Date().toISOString()
+            };
+            
+            console.log('Starting upload...', fileName);
+            
+            // 1. First try: Simple PUT request with fetch
             try {
-                // In a real implementation, you would use AWS SDK
-                // For security, this should be done via a backend server
+                const url = `${R2_CONFIG.endpoint}/${R2_CONFIG.bucketName}/${fileName}`;
                 
-                // Simulate upload process
-                await new Promise(resolve => setTimeout(resolve, 1500));
+                // Convert credentials to base64 for Basic Auth
+                const credentials = btoa(`${R2_CONFIG.accessKeyId}:${R2_CONFIG.secretAccessKey}`);
                 
-                // Generate filename
-                const fileExt = file.name.split('.').pop();
-                const fileName = `profile-${generateId()}.${fileExt}`;
-                const profileId = generateId();
+                const response = await fetch(url, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': file.type,
+                        'Authorization': `Basic ${credentials}`,
+                        'x-amz-acl': 'public-read'
+                    },
+                    body: file
+                });
                 
-                // Create profile data file
-                const profileJson = {
-                    id: profileId,
-                    ...profileData,
-                    photoUrl: fileName,
-                    createdAt: new Date().toISOString()
+                if (response.ok) {
+                    console.log('✅ Direct upload successful!');
+                    return {
+                        success: true,
+                        profileId: profileId,
+                        fileName: fileName,
+                        url: url,
+                        method: 'direct',
+                        profile: profileJson
+                    };
+                } else {
+                    console.log('Direct upload failed, trying AWS SDK...');
+                }
+            } catch (fetchError) {
+                console.log('Fetch error:', fetchError.message);
+            }
+            
+            // 2. Second try: AWS SDK
+            try {
+                const params = {
+                    Bucket: R2_CONFIG.bucketName,
+                    Key: fileName,
+                    Body: file,
+                    ContentType: file.type,
+                    ACL: 'public-read'
                 };
                 
-                // In real implementation:
-                // 1. Upload image file to R2
-                // 2. Upload profile JSON to R2
-                // 3. Return the URLs
-                
-                // For demo, store in localStorage
-                const profiles = JSON.parse(localStorage.getItem('r2_profiles') || '[]');
-                profiles.push(profileJson);
-                localStorage.setItem('r2_profiles', JSON.stringify(profiles));
+                await s3.putObject(params).promise();
+                console.log('✅ AWS SDK upload successful!');
                 
                 return {
                     success: true,
                     profileId: profileId,
-                    fileName: fileName
+                    fileName: fileName,
+                    url: `${R2_CONFIG.endpoint}/${R2_CONFIG.bucketName}/${fileName}`,
+                    method: 'aws-sdk',
+                    profile: profileJson
                 };
                 
-            } catch (error) {
-                console.error('Upload error:', error);
-                return { success: false, error: error.message };
-            }
-        }
-
-        // Form Submission
-        submitBtn.addEventListener('click', async function() {
-            // Validate form
-            let isValid = true;
-            formInputs.forEach(id => {
-                const element = document.getElementById(id);
-                if (element.required && !element.value.trim()) {
-                    isValid = false;
-                    element.style.borderColor = '#ef4444';
-                } else {
-                    element.style.borderColor = '#e5e7eb';
-                }
-            });
-            
-            if (!photoInput.files[0]) {
-                isValid = false;
-                photoUpload.style.borderColor = '#ef4444';
-                photoUpload.innerHTML = `<i class="fas fa-exclamation-circle"></i><p>Photo is required!</p>`;
+            } catch (awsError) {
+                console.log('AWS SDK error:', awsError.message);
             }
             
-            if (!isValid) {
-                showError('Please fill in all required fields');
-                return;
-            }
-            
-            // Get form data
-            const profileData = {
-                fullName: document.getElementById('fullName').value,
-                email: document.getElementById('email').value,
-                bio: document.getElementById('bio').value,
-                role: document.getElementById('role').value || 'Not specified'
+            // 3. Fallback: Local storage
+            console.log('Both methods failed, using local storage');
+            return {
+                success: true,
+                profileId: profileId,
+                fileName: fileName,
+                url: null,
+                method: 'local',
+                profile: profileJson
             };
             
-            // Show loading
-            submitBtn.querySelector('.btn-text').style.display = 'none';
-            submitBtn.querySelector('.loading').style.display = 'block';
-            submitBtn.disabled = true;
-            
-            // Upload
-            const result = await uploadToR2(photoInput.files[0], profileData);
-            
-            if (result.success) {
-                showSuccess();
-                // Redirect to dashboard after 2 seconds
-                setTimeout(() => {
-                    window.location.href = 'dashboard.html';
-                }, 2000);
-            } else {
-                showError('Upload failed: ' + result.error);
-                submitBtn.querySelector('.btn-text').style.display = 'block';
-                submitBtn.querySelector('.loading').style.display = 'none';
-                submitBtn.disabled = false;
-            }
-        });
-
-        function showError(message) {
-            errorMessage.textContent = message;
-            errorMessage.style.display = 'block';
-            successMessage.style.display = 'none';
-            
-            // Auto hide error
-            setTimeout(() => {
-                errorMessage.style.display = 'none';
-            }, 5000);
+        } catch (error) {
+            console.error('Upload error:', error);
+            return { 
+                success: false, 
+                error: error.message 
+            };
         }
+    }
 
-        function showSuccess() {
-            successMessage.style.display = 'flex';
-            errorMessage.style.display = 'none';
-        }
-
-        // Input validation styling
+    // Form Submission
+    submitBtn.addEventListener('click', async function() {
+        // Validate form
+        let isValid = true;
         formInputs.forEach(id => {
             const element = document.getElementById(id);
-            element.addEventListener('input', function() {
-                this.style.borderColor = '#e5e7eb';
-            });
+            if (element.required && !element.value.trim()) {
+                isValid = false;
+                element.style.borderColor = '#ef4444';
+            } else {
+                element.style.borderColor = '#e5e7eb';
+            }
         });
-    </script>
+        
+        if (!photoInput.files[0]) {
+            isValid = false;
+            photoUpload.style.borderColor = '#ef4444';
+            photoUpload.innerHTML = `<i class="fas fa-exclamation-circle"></i><p>Photo is required!</p>`;
+        }
+        
+        if (!isValid) {
+            showError('Please fill in all required fields');
+            return;
+        }
+        
+        // Get form data
+        const profileData = {
+            fullName: document.getElementById('fullName').value,
+            email: document.getElementById('email').value,
+            bio: document.getElementById('bio').value,
+            role: document.getElementById('role').value || 'Not specified'
+        };
+        
+        // Show loading
+        submitBtn.querySelector('.btn-text').style.display = 'none';
+        submitBtn.querySelector('.loading').style.display = 'block';
+        submitBtn.disabled = true;
+        
+        // Upload
+        const result = await uploadToR2Simple(photoInput.files[0], profileData);
+        
+        if (result.success) {
+            // Store in localStorage
+            const profiles = JSON.parse(localStorage.getItem('r2_profiles') || '[]');
+            profiles.push(result.profile);
+            localStorage.setItem('r2_profiles', JSON.stringify(profiles));
+            
+            // Show success message based on method
+            if (result.method === 'local') {
+                successText.textContent = '⚠️ Saved locally (R2 upload failed)';
+                successMessage.style.background = '#f59e0b';
+                uploadDetails.innerHTML = `
+                    <strong>Profile ID:</strong> ${result.profileId}<br>
+                    <strong>File:</strong> ${result.fileName}<br>
+                    <strong>Status:</strong> Local storage only - check CORS settings
+                `;
+            } else {
+                successText.textContent = '✅ Uploaded to R2 Successfully!';
+                successMessage.style.background = '#10b981';
+                uploadDetails.innerHTML = `
+                    <strong>Profile ID:</strong> ${result.profileId}<br>
+                    <strong>File:</strong> ${result.fileName}<br>
+                    <strong>Method:</strong> ${result.method}<br>
+                    <strong>URL:</strong> <a href="${result.url}" target="_blank">View File</a>
+                `;
+            }
+            
+            successMessage.style.display = 'flex';
+            errorMessage.style.display = 'none';
+            
+            // Clear form
+            document.getElementById('fullName').value = '';
+            document.getElementById('email').value = '';
+            document.getElementById('bio').value = '';
+            document.getElementById('role').value = '';
+            photoInput.value = '';
+            photoPreview.style.display = 'none';
+            photoPreview.innerHTML = '';
+            photoUpload.innerHTML = `
+                <i class="fas fa-cloud-upload-alt"></i>
+                <p>Click to upload photo (Max 5MB)</p>
+                <p><small>JPG, PNG or GIF supported</small></p>
+            `;
+            
+        } else {
+            showError('Upload failed: ' + result.error);
+        }
+        
+        // Reset button
+        submitBtn.querySelector('.btn-text').style.display = 'block';
+        submitBtn.querySelector('.loading').style.display = 'none';
+        submitBtn.disabled = false;
+    });
+
+    function showError(message) {
+        errorMessage.textContent = message;
+        errorMessage.style.display = 'block';
+        successMessage.style.display = 'none';
+        
+        setTimeout(() => {
+            errorMessage.style.display = 'none';
+        }, 5000);
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+        testConnection();
+    });
+</script>
 </body>
 </html>

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test R2 Connection</title>
+</head>
+<body>
+    <h1>Testing R2 Connection</h1>
+    <div id="result"></div>
+    
+    <script>
+        const config = {
+            endpoint: "https://86684c814a2fe7dd897881493ef8cc18.r2.cloudflarestorage.com",
+            bucket: "user-profiles",
+            accessKeyId: "9a0352676d5eee43551f0bbc52ba0132",
+            secretAccessKey: "2766e41499c9c90de55867bfc14e29e6a9b27d802903a22f8310654f5d1e7406"
+        };
+        
+        async function test() {
+            const url = `${config.endpoint}/${config.bucket}/test.txt`;
+            const auth = btoa(`${config.accessKeyId}:${config.secretAccessKey}`);
+            
+            try {
+                // Try to list objects
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Basic ${auth}`
+                    }
+                });
+                
+                document.getElementById('result').innerHTML = 
+                    response.ok ? 
+                    '<span style="color: green">✅ Connection Successful!</span>' :
+                    `<span style="color: red">❌ Failed: ${response.status} ${response.statusText}</span>`;
+                    
+            } catch (error) {
+                document.getElementById('result').innerHTML = 
+                    `<span style="color: red">❌ Error: ${error.message}</span>`;
+            }
+        }
+        
+        test();
+    </script>
+</body>
+</html>

@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profiles Dashboard | Worker + R2</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .stats {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            min-width: 150px;
+        }
+        
+        .stat-card h3 {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+        
+        .stat-card p {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .refresh-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s;
+        }
+        
+        .refresh-btn:hover {
+            background: #0da271;
+            transform: translateY(-2px);
+        }
+        
+        .profiles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+        }
+        
+        .profile-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+            animation: fadeIn 0.5s forwards;
+            opacity: 0;
+        }
+        
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+        
+        .profile-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+        }
+        
+        .card-header {
+            height: 200px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .card-header img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s;
+        }
+        
+        .profile-card:hover .card-header img {
+            transform: scale(1.05);
+        }
+        
+        .role-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(79, 70, 229, 0.9);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            backdrop-filter: blur(5px);
+        }
+        
+        .card-body {
+            padding: 20px;
+        }
+        
+        .profile-name {
+            font-size: 22px;
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+        
+        .profile-email {
+            color: #7c3aed;
+            margin-bottom: 12px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .profile-bio {
+            color: #6b7280;
+            line-height: 1.5;
+            margin-bottom: 15px;
+            font-size: 14px;
+            max-height: 60px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .profile-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #9ca3af;
+            font-size: 12px;
+            border-top: 1px solid #f3f4f6;
+            padding-top: 15px;
+        }
+        
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 60px 20px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            margin: 20px 0;
+        }
+        
+        .empty-state i {
+            font-size: 80px;
+            margin-bottom: 20px;
+            color: #6b7280;
+        }
+        
+        .empty-state h3 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #1f2937;
+        }
+        
+        .loading {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .loading i {
+            font-size: 40px;
+            color: #4f46e5;
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 40px;
+        }
+        
+        .page-btn {
+            background: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .page-btn:hover {
+            background: #4f46e5;
+            color: white;
+        }
+        
+        .page-btn.active {
+            background: #4f46e5;
+            color: white;
+        }
+        
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            .stats {
+                width: 100%;
+                justify-content: space-between;
+            }
+            
+            .profiles-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-users"></i> Profiles Dashboard</h1>
+            <p>Powered by Cloudflare Worker + R2 Storage</p>
+            <p style="margin-top: 10px; font-size: 14px; opacity: 0.8;">
+                <i class="fas fa-globe"></i> Custom Domain: rave-master.de
+            </p>
+        </div>
+        
+        <div class="controls">
+            <div class="stats">
+                <div class="stat-card">
+                    <h3>Total Profiles</h3>
+                    <p id="totalProfiles">0</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Last Updated</h3>
+                    <p id="lastUpdated">-</p>
+                </div>
+            </div>
+            
+            <div>
+                <button class="refresh-btn" id="refreshBtn">
+                    <i class="fas fa-sync-alt"></i> Refresh Profiles
+                </button>
+            </div>
+        </div>
+        
+        <div class="profiles-grid" id="profilesGrid">
+            <div class="loading">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Loading profiles from Worker...</p>
+            </div>
+        </div>
+        
+        <div class="pagination" id="pagination" style="display: none;">
+            <!-- Pagination buttons will be added here -->
+        </div>
+    </div>
+
+    <script>
+        // Configuration - USING CUSTOM DOMAIN
+        const WORKER_URL = "https://secure-r2-upload.ravemaster.workers.dev";
+        const CDN_DOMAIN = "https://rave-master.de";  // CHANGED TO CUSTOM DOMAIN
+        let allProfiles = [];
+        let currentPage = 1;
+        const profilesPerPage = 6;
+        
+        // DOM Elements
+        const profilesGrid = document.getElementById('profilesGrid');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const totalProfilesEl = document.getElementById('totalProfiles');
+        const lastUpdatedEl = document.getElementById('lastUpdated');
+        const paginationEl = document.getElementById('pagination');
+        
+        // Helper function to fix image URLs
+        function fixImageUrl(url) {
+            if (!url) return null;
+            // Replace public R2 URL with custom domain
+            if (url.includes('pub-0156e15f07124468bfa5ed51cc97eb3f.r2.dev')) {
+                return url.replace('pub-0156e15f07124468bfa5ed51cc97eb3f.r2.dev', 'rave-master.de');
+            }
+            return url;
+        }
+        
+        // Load profiles from Worker
+        async function loadProfiles() {
+            console.log('🔍 Loading profiles from Worker...');
+            profilesGrid.innerHTML = `
+                <div class="loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Loading profiles from Worker...</p>
+                </div>
+            `;
+            
+            try {
+                const response = await fetch(WORKER_URL + '/list');
+                
+                if (!response.ok) {
+                    throw new Error(`Worker responded with ${response.status}`);
+                }
+                
+                allProfiles = await response.json();
+                console.log(`📊 Loaded ${allProfiles.length} profiles`);
+                
+                // Fix image URLs for all profiles
+                allProfiles = allProfiles.map(profile => {
+                    if (profile.imageUrl) {
+                        profile.imageUrl = fixImageUrl(profile.imageUrl);
+                    }
+                    return profile;
+                });
+                
+                // Update stats
+                updateStats();
+                
+                // Display profiles
+                displayProfiles();
+                
+                // Setup pagination
+                setupPagination();
+                
+            } catch (error) {
+                console.error('Error loading profiles:', error);
+                
+                // Try loading from localStorage as fallback
+                const localProfiles = JSON.parse(localStorage.getItem('worker_profiles') || '[]');
+                
+                if (localProfiles.length > 0) {
+                    allProfiles = localProfiles.map(profile => {
+                        if (profile.imageUrl) {
+                            profile.imageUrl = fixImageUrl(profile.imageUrl);
+                        }
+                        return profile;
+                    });
+                    
+                    updateStats();
+                    displayProfiles();
+                    setupPagination();
+                    
+                    profilesGrid.innerHTML += `
+                        <div class="empty-state">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <h3>⚠️ Using Local Backup</h3>
+                            <p>Worker connection failed. Showing locally stored profiles.</p>
+                            <p>Error: ${error.message}</p>
+                        </div>
+                    `;
+                } else {
+                    profilesGrid.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-users-slash"></i>
+                            <h3>No Profiles Found</h3>
+                            <p>${error.message}</p>
+                            <p>Try refreshing or <a href="index.html">create a new profile</a>.</p>
+                        </div>
+                    `;
+                }
+            }
+        }
+        
+        // Update statistics
+        function updateStats() {
+            totalProfilesEl.textContent = allProfiles.length;
+            lastUpdatedEl.textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }
+        
+        // Display profiles for current page
+        function displayProfiles() {
+            if (allProfiles.length === 0) {
+                profilesGrid.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-users-slash"></i>
+                        <h3>No Profiles Yet</h3>
+                        <p>Be the first to <a href="index.html">create a profile</a>!</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Calculate slice for current page
+            const startIndex = (currentPage - 1) * profilesPerPage;
+            const endIndex = startIndex + profilesPerPage;
+            const currentProfiles = allProfiles.slice(startIndex, endIndex);
+            
+            // Create profile cards
+            profilesGrid.innerHTML = currentProfiles.map(profile => {
+                // Determine image URL
+                let imageUrl = profile.imageUrl;
+                
+                // If no imageUrl, try to construct it
+                if (!imageUrl) {
+                    if (profile.photoFileName) {
+                        imageUrl = `${CDN_DOMAIN}/${profile.photoFileName}`;
+                    } else if (profile.id) {
+                        imageUrl = `${CDN_DOMAIN}/profile-${profile.id}.jpg`;
+                    }
+                }
+                
+                // Final fallback
+                if (!imageUrl) {
+                    imageUrl = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&h=400&fit=crop';
+                }
+                
+                console.log(`🖼️ Profile ${profile.id}: ${imageUrl}`);
+                
+                return `
+                <div class="profile-card">
+                    <div class="card-header">
+                        <img src="${profile.imageUrl}" 
+     alt="${profile.fullName}"
+     onerror="console.error('Image failed:', this.src); this.src='https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&h=400&fit=crop'">
+                        <div class="role-badge">${profile.role || 'Unknown'}</div>
+                    </div>
+                    <div class="card-body">
+                        <h3 class="profile-name">${profile.fullName}</h3>
+                        <div class="profile-email">
+                            <i class="fas fa-envelope"></i> ${profile.email}
+                        </div>
+                        <p class="profile-bio">${profile.bio || 'No bio provided.'}</p>
+                        <div class="profile-meta">
+                            <span><i class="far fa-calendar"></i> ${formatDate(profile.createdAt)}</span>
+                            <span><i class="fas fa-id-card"></i> ${profile.id ? profile.id.substring(0, 8) : 'N/A'}</span>
+                        </div>
+                    </div>
+                </div>
+            `}).join('');
+        }
+        
+        // Setup pagination
+        function setupPagination() {
+            if (allProfiles.length <= profilesPerPage) {
+                paginationEl.style.display = 'none';
+                return;
+            }
+            
+            const totalPages = Math.ceil(allProfiles.length / profilesPerPage);
+            paginationEl.style.display = 'flex';
+            paginationEl.innerHTML = '';
+            
+            for (let i = 1; i <= totalPages; i++) {
+                const button = document.createElement('button');
+                button.className = `page-btn ${i === currentPage ? 'active' : ''}`;
+                button.textContent = i;
+                button.onclick = () => {
+                    currentPage = i;
+                    displayProfiles();
+                    setupPagination();
+                };
+                paginationEl.appendChild(button);
+            }
+        }
+        
+        // Format date
+        function formatDate(dateString) {
+            try {
+                const date = new Date(dateString);
+                const now = new Date();
+                const diffMs = now - date;
+                const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                
+                if (diffDays === 0) {
+                    return 'Today';
+                } else if (diffDays === 1) {
+                    return 'Yesterday';
+                } else if (diffDays < 7) {
+                    return `${diffDays} days ago`;
+                } else {
+                    return date.toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric'
+                    });
+                }
+            } catch (e) {
+                return 'Unknown date';
+            }
+        }
+        
+        // Event Listeners
+        refreshBtn.addEventListener('click', loadProfiles);
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'r' || e.key === 'R') {
+                if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                    loadProfiles();
+                }
+            }
+        });
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', loadProfiles);
+        
+        // Auto-refresh every 30 seconds
+        setInterval(loadProfiles, 30000);
+    </script>
+</body>
+</html>

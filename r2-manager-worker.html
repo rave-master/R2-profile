@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>R2 Manager | Worker Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 40px 20px;
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 20px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .header h1 {
+            font-size: 36px;
+            margin-bottom: 15px;
+            color: #60a5fa;
+        }
+        
+        .dashboard-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .card {
+            background: rgba(30, 41, 59, 0.8);
+            padding: 25px;
+            border-radius: 15px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .card h3 {
+            color: #93c5fd;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .card-value {
+            font-size: 32px;
+            font-weight: bold;
+            margin: 10px 0;
+            color: #60a5fa;
+        }
+        
+        .card-desc {
+            color: #94a3b8;
+            font-size: 14px;
+        }
+        
+        .file-list {
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .file-list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .file-item {
+            background: rgba(15, 23, 42, 0.6);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: all 0.3s;
+        }
+        
+        .file-item:hover {
+            background: rgba(30, 64, 175, 0.3);
+            transform: translateX(5px);
+        }
+        
+        .file-icon {
+            font-size: 24px;
+            color: #60a5fa;
+        }
+        
+        .file-details {
+            flex: 1;
+        }
+        
+        .file-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+            word-break: break-all;
+        }
+        
+        .file-meta {
+            font-size: 13px;
+            color: #94a3b8;
+        }
+        
+        .file-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .action-btn {
+            background: rgba(59, 130, 246, 0.2);
+            border: 1px solid rgba(59, 130, 246, 0.5);
+            color: #93c5fd;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        
+        .action-btn:hover {
+            background: rgba(59, 130, 246, 0.4);
+            transform: translateY(-2px);
+        }
+        
+        .refresh-btn {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 20px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .nav-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            color: #93c5fd;
+            text-decoration: none;
+            padding: 12px 25px;
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 10px;
+            transition: all 0.3s;
+        }
+        
+        .nav-link:hover {
+            background: rgba(59, 130, 246, 0.2);
+            transform: translateX(-5px);
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard-cards {
+                grid-template-columns: 1fr;
+            }
+            
+            .file-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .file-actions {
+                width: 100%;
+                justify-content: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-database"></i> R2 Storage Manager</h1>
+            <p>Managed via Cloudflare Worker</p>
+            <div style="margin-top: 20px; font-size: 14px; color: #94a3b8;">
+                <p><strong>Worker:</strong> secure-r2-upload.ravemaster.workers.dev</p>
+                <p><strong>R2 Bucket:</strong> user-profiles</p>
+                <p><strong>Custom Domain:</strong> rave-master.de</p>
+                <p><strong>Public URL (legacy):</strong> pub-0156e15f07124468bfa5ed51cc97eb3f.r2.dev</p>
+            </div>
+        </div>
+        
+        <button class="refresh-btn" id="refreshBtn">
+            <i class="fas fa-sync-alt"></i> Refresh All Data
+        </button>
+        
+        <div class="dashboard-cards">
+            <div class="card">
+                <h3><i class="fas fa-users"></i> Total Profiles</h3>
+                <div class="card-value" id="totalProfiles">0</div>
+                <p class="card-desc">Profiles stored in R2 via Worker</p>
+            </div>
+            
+            <div class="card">
+                <h3><i class="fas fa-images"></i> Image Files</h3>
+                <div class="card-value" id="imageFiles">0</div>
+                <p class="card-desc">Profile photos uploaded</p>
+            </div>
+            
+            <div class="card">
+                <h3><i class="fas fa-file-code"></i> JSON Files</h3>
+                <div class="card-value" id="jsonFiles">0</div>
+                <p class="card-desc">Profile metadata files</p>
+            </div>
+            
+            <div class="card">
+                <h3><i class="fas fa-server"></i> Worker Status</h3>
+                <div class="card-value" id="workerStatus">Checking...</div>
+                <p class="card-desc">Cloudflare Worker connectivity</p>
+            </div>
+        </div>
+        
+        <div class="file-list">
+            <div class="file-list-header">
+                <h2><i class="fas fa-file"></i> Recent Uploads</h2>
+            </div>
+            <div id="filesList">
+                <p style="text-align: center; padding: 40px; color: #94a3b8;">
+                    <i class="fas fa-spinner fa-spin"></i> Loading files...
+                </p>
+            </div>
+        </div>
+        
+        <div class="nav-links">
+            <a href="index.html" class="nav-link">
+                <i class="fas fa-user-plus"></i> Create New Profile
+            </a>
+            <a href="dashboard-worker.html" class="nav-link">
+                <i class="fas fa-th-large"></i> View Profiles Dashboard
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Configuration - USING CUSTOM DOMAIN
+        const WORKER_URL = "https://secure-r2-upload.ravemaster.workers.dev";
+        const CDN_DOMAIN = "https://rave-master.de";  // CHANGED TO CUSTOM DOMAIN
+        
+        // DOM Elements
+        const refreshBtn = document.getElementById('refreshBtn');
+        const totalProfilesEl = document.getElementById('totalProfiles');
+        const imageFilesEl = document.getElementById('imageFiles');
+        const jsonFilesEl = document.getElementById('jsonFiles');
+        const workerStatusEl = document.getElementById('workerStatus');
+        const filesList = document.getElementById('filesList');
+        
+        // Helper function to fix URLs
+        function fixUrl(url) {
+            if (!url) return url;
+            if (url.includes('pub-0156e15f07124468bfa5ed51cc97eb3f.r2.dev')) {
+                return url.replace('pub-0156e15f07124468bfa5ed51cc97eb3f.r2.dev', 'rave-master.de');
+            }
+            return url;
+        }
+        
+        // Load data
+        async function loadData() {
+            try {
+                // Test worker connection
+                const testResponse = await fetch(WORKER_URL + '/list');
+                if (testResponse.ok) {
+                    workerStatusEl.innerHTML = '<span style="color:#10b981">✅ Online</span>';
+                } else {
+                    throw new Error(`Worker error: ${testResponse.status}`);
+                }
+                
+                // Load profiles
+                const response = await fetch(WORKER_URL + '/list');
+                const profiles = await response.json();
+                
+                // Fix URLs in profiles
+                const fixedProfiles = profiles.map(profile => {
+                    if (profile.imageUrl) {
+                        profile.imageUrl = fixUrl(profile.imageUrl);
+                    }
+                    return profile;
+                });
+                
+                // Update stats
+                updateStats(fixedProfiles);
+                
+                // Display recent files
+                displayRecentFiles(fixedProfiles);
+                
+            } catch (error) {
+                console.error('Error loading data:', error);
+                workerStatusEl.innerHTML = `<span style="color:#ef4444">❌ Offline: ${error.message}</span>`;
+                
+                // Load from localStorage as fallback
+                const localProfiles = JSON.parse(localStorage.getItem('worker_profiles') || '[]');
+                if (localProfiles.length > 0) {
+                    const fixedLocalProfiles = localProfiles.map(profile => {
+                        if (profile.imageUrl) {
+                            profile.imageUrl = fixUrl(profile.imageUrl);
+                        }
+                        return profile;
+                    });
+                    
+                    updateStats(fixedLocalProfiles);
+                    displayRecentFiles(fixedLocalProfiles);
+                    
+                    filesList.innerHTML += `
+                        <p style="text-align: center; color: #f59e0b; margin-top: 20px;">
+                            <i class="fas fa-exclamation-triangle"></i> Showing local backup data
+                        </p>
+                    `;
+                }
+            }
+        }
+        
+        // Update statistics
+        function updateStats(profiles) {
+            totalProfilesEl.textContent = profiles.length;
+            
+            // Count image and JSON files
+            const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+            let imageCount = 0;
+            let jsonCount = 0;
+            
+            profiles.forEach(profile => {
+                if (profile.photoFileName) {
+                    const ext = profile.photoFileName.split('.').pop().toLowerCase();
+                    if (imageExtensions.includes(ext)) {
+                        imageCount++;
+                    }
+                }
+                jsonCount++; // Each profile has a JSON file
+            });
+            
+            imageFilesEl.textContent = imageCount;
+            jsonFilesEl.textContent = jsonCount;
+        }
+        
+        // Display recent files
+        function displayRecentFiles(profiles) {
+            // Sort by date (newest first)
+            const sortedProfiles = [...profiles].sort((a, b) => 
+                new Date(b.createdAt) - new Date(a.createdAt)
+            ).slice(0, 10); // Show 10 most recent
+            
+            if (sortedProfiles.length === 0) {
+                filesList.innerHTML = `
+                    <p style="text-align: center; padding: 40px; color: #94a3b8;">
+                        <i class="fas fa-folder-open"></i> No files found.
+                        <br><small>Upload some profiles first!</small>
+                    </p>
+                `;
+                return;
+            }
+            
+            filesList.innerHTML = sortedProfiles.map(profile => {
+                const isImage = profile.photoFileName && 
+                    profile.photoFileName.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+                
+                // Get image URL
+                let imageUrl = profile.imageUrl;
+                if (!imageUrl && profile.photoFileName) {
+                    imageUrl = `${CDN_DOMAIN}/${profile.photoFileName}`;
+                } else if (!imageUrl && profile.id) {
+                    imageUrl = `${CDN_DOMAIN}/profile-${profile.id}.jpg`;
+                }
+                
+                // Get JSON URL
+                let jsonUrl = profile.jsonUrl || `${CDN_DOMAIN}/profile-${profile.id}.json`;
+                
+                return `
+                    <div class="file-item">
+                        <div class="file-icon">
+                            ${isImage ? '<i class="fas fa-image"></i>' : '<i class="fas fa-file"></i>'}
+                        </div>
+                        <div class="file-details">
+                            <div class="file-name">${profile.photoFileName || 'Unknown file'}</div>
+                            <div class="file-meta">
+                                <strong>${profile.fullName || 'Unknown'}</strong> • 
+                                ${profile.role || 'No role'} • 
+                                ${formatDate(profile.createdAt)} • 
+                                ${profile.email || 'No email'}
+                            </div>
+                        </div>
+                        <div class="file-actions">
+                            ${isImage ? `
+                            <a href="${imageUrl}" target="_blank" class="action-btn">
+                                <i class="fas fa-external-link-alt"></i> View
+                            </a>` : ''}
+                            <a href="${jsonUrl}" target="_blank" class="action-btn">
+                                <i class="fas fa-code"></i> JSON
+                            </a>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Format date
+        function formatDate(dateString) {
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch (e) {
+                return 'Unknown date';
+            }
+        }
+        
+        // Event listeners
+        refreshBtn.addEventListener('click', loadData);
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', loadData);
+        
+        // Auto-refresh every 60 seconds
+        setInterval(loadData, 60000);
+    </script>
+</body>
+</html>
